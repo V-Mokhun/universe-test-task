@@ -7,6 +7,7 @@ export const GetProjectsQuerySchema = z.object({
     .min(1, "Limit must be greater than 0")
     .max(100, "Limit must be less than 100")
     .default(10),
+  search: z.string().optional(),
 });
 
 export type GetProjectsQuery = z.infer<typeof GetProjectsQuerySchema>;

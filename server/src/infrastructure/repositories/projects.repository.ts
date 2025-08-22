@@ -1,5 +1,7 @@
 import { IDatabase, IRepositoryData, ProjectCreate } from "@/shared/ports";
 import { IProjectsRepository, Project } from "@/shared/ports";
+import { GetProjectsQuery } from "@/modules/projects/projects.schema";
+import { Prisma } from "@db";
 
 export class ProjectsRepository implements IProjectsRepository {
   constructor(private readonly db: IDatabase) {}
@@ -17,20 +19,37 @@ export class ProjectsRepository implements IProjectsRepository {
 
   async findAllByUserId(
     userId: string,
-    options: {
-      page: number;
-      limit: number;
-    }
+    options: GetProjectsQuery
   ): Promise<{ projects: Project[]; total: number }> {
+    const whereClause: Prisma.ProjectWhereInput = { userId };
+
+    if (options.search && options.search.trim()) {
+      const searchTerm = options.search.trim();
+      whereClause.OR = [
+        {
+          owner: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+
     const [projects, total] = await Promise.all([
       this.db.project.findMany({
-        where: { userId },
+        where: whereClause,
         orderBy: { createdAt: "desc" },
         skip: (options.page - 1) * options.limit,
         take: options.limit,
       }),
       this.db.project.count({
-        where: { userId },
+        where: whereClause,
       }),
     ]);
 

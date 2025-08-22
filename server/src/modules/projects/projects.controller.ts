@@ -29,13 +29,14 @@ export class ProjectsController {
     next: NextFunction
   ) {
     try {
-      const { page, limit } = req.parsedQuery;
+      const { page, limit, search } = req.parsedQuery;
 
       const { projects, total } = await this.service.getAllProjects(
         req.user.id,
         {
           page,
           limit,
+          search,
         }
       );
       res.status(200).json({ projects, total });

@@ -36,6 +36,7 @@ export const getProjectsOptionsSchema = z.object({
     .min(1, "Limit must be greater than 0")
     .max(100, "Limit must be less than 100")
     .default(10),
+  search: z.string().optional(),
 });
 export type GetProjectsOptions = z.infer<typeof getProjectsOptionsSchema>;
 

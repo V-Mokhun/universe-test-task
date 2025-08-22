@@ -17,7 +17,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { ProjectsPagination } from "../../shared/components/pagination";
 import { Button } from "../../shared/components/ui/button";
@@ -45,13 +45,16 @@ import {
   FormMessage,
 } from "../../shared/components/ui/form";
 import { Input } from "../../shared/components/ui/input";
+import { useDebounce } from "use-debounce";
 
 import { useSearchParams } from "react-router-dom";
 
-export const ProjectsPage: React.FC = () => {
+export const ProjectsPage = () => {
   const [searchParams] = useSearchParams();
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
   const pageFromParams = Number(searchParams.get("page") || "1");
   const page =
     Number.isFinite(pageFromParams) && pageFromParams > 0 ? pageFromParams : 1;
@@ -64,7 +67,7 @@ export const ProjectsPage: React.FC = () => {
     },
   });
 
-  const projectsQuery = useProjects({ ...pagination });
+  const projectsQuery = useProjects({ ...pagination, search: debouncedSearch });
   const createProjectMutation = useCreateProject();
   const deleteProjectMutation = useDeleteProject();
   const refreshProjectMutation = useRefreshProject();
@@ -176,6 +179,15 @@ export const ProjectsPage: React.FC = () => {
           {error}
         </div>
       )}
+
+      {/* Search */}
+      <div>
+        <Input
+          placeholder="Search projects..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

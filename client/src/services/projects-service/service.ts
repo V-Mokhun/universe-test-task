@@ -19,6 +19,7 @@ export class ProjectsService extends BaseService {
     const queryString = await this.httpClient.constructQueryString({
       page: options.page.toString(),
       limit: options.limit.toString(),
+      ...(options.search ? { search: options.search } : {}),
     });
 
     const response = await this.get<GetProjectsResponse>(

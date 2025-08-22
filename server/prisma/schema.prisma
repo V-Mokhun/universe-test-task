@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/db"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  hashedPassword String   @map("hashed_password")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  projects Project[] @relation("UserProjects")
+
+  @@index([email])
+  @@map("users")
+}
+
+model Project {
+  id         String   @id @default(uuid())
+  owner      String
+  name       String
+  url        String
+  stars      Int      @default(0)
+  forks      Int      @default(0)
+  openIssues Int      @default(0) @map("open_issues")
+  repoCreatedAt Int   @map("repo_created_at")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation("UserProjects", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, owner, name])
+  @@index([userId])
+  @@map("projects")
+}

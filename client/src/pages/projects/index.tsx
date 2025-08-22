@@ -17,7 +17,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { ProjectsPagination } from "../../shared/components/pagination";
 import { Button } from "../../shared/components/ui/button";

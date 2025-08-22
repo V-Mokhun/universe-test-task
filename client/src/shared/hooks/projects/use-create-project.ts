@@ -6,6 +6,10 @@ import {
 } from "@/services";
 import { GET_PROJECTS_QUERY_KEY } from "./use-projects";
 
+interface ApiError extends Error {
+  status?: number;
+}
+
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
 
@@ -15,8 +19,8 @@ export const useCreateProject = () => {
         payload
       );
       if (!data || error) {
-        const err = new Error(error || `Failed to create project`);
-        (err as any).status = status;
+        const err = new Error(error || `Failed to create project`) as ApiError;
+        err.status = status;
         throw err;
       }
       return data;

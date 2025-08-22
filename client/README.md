@@ -1,69 +1,98 @@
-# React + TypeScript + Vite
+# Universe Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend application for the Universe GitHub Projects Tracker built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## 🚀 Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js 18+
+- The server should be running (see [server README](../server/README.md))
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Development Setup
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. **Install dependencies**
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+   ```bash
+   npm install
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. **Set up environment variables**
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API URL
+   ```
+
+3. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+The application will be available at `http://localhost:5173`
+
+## 🏗️ Architecture
+
+This frontend follows modern React patterns with the following structure:
+
+```
+src/
+├── app.tsx              # Main app component with routing
+├── main.tsx             # Application entry point
+├── pages/               # Page components
+│   ├── login/          # Authentication pages
+│   ├── register/       # User registration
+│   └── projects/       # Projects management
+├── shared/             # Shared utilities and components
+│   ├── components/     # Reusable UI components
+│   │   ├── ui/        # Base UI components (buttons, forms, etc.)
+│   ├── hooks/         # Custom React hooks
+│   └── lib/           # Utility functions
+├── services/           # API service layer
+│   ├── auth-service/  # Authentication API calls
+│   ├── projects-service/ # Projects API calls
+│   └── http-client/   # HTTP client configuration
+|   └── base-service/  # Base service
+├── context/           # React context providers
+├── providers/         # Application providers
+└── widgets/           # Feature-specific components
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ Technology Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite
+- **State Management**: TanStack Query for server state
+- **UI Library**: Shadcn UI
+- **Forms**: React Hook Form with Zod validation
+- **Routing**: React Router v7
+- **HTTP Client**: Custom service layer with fetch API
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## � Available Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint errors
+npm run type-check   # Run TypeScript type checking
 ```
+
+### Environment Variables
+
+Create a `.env` file in the client directory:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+## 📦 Production Build
+
+### Build Process
+
+```bash
+npm run build
+```
+
+This creates a production-ready build in the `dist/` directory.

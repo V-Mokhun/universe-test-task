@@ -1,9 +1,11 @@
+import { createProjectSchema, type CreateProjectBody } from "@/services";
 import {
-  createProjectSchema,
-  projectsService,
-  type CreateProjectBody,
-  type Project,
-} from "@/services";
+  useCreateProject,
+  useDeleteProject,
+  useProjects,
+  useRefreshProject,
+} from "@/shared/hooks";
+import { formatNumber, formatUnixDate } from "@/shared/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
@@ -15,8 +17,9 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { ProjectsPagination } from "../../shared/components/pagination";
 import { Button } from "../../shared/components/ui/button";
 import {
   Card,
@@ -42,15 +45,17 @@ import {
   FormMessage,
 } from "../../shared/components/ui/form";
 import { Input } from "../../shared/components/ui/input";
-import { formatUnixDate, formatNumber } from "@/shared/lib";
 
-// todo: add pagination, maybe search, sort
-// todo: see react-query or swr
+import { useSearchParams } from "react-router-dom";
+
 export const ProjectsPage: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const pageFromParams = Number(searchParams.get("page") || "1");
+  const page =
+    Number.isFinite(pageFromParams) && pageFromParams > 0 ? pageFromParams : 1;
+  const pagination = useMemo(() => ({ page, limit: 10 }), [page]);
 
   const form = useForm<CreateProjectBody>({
     resolver: zodResolver(createProjectSchema),
@@ -59,97 +64,49 @@ export const ProjectsPage: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await projectsService.getProjects({
-        page: 1,
-        limit: 10,
-      });
-      if (result.data) {
-        setProjects(result.data.projects);
-      } else {
-        setError(result.error || "Failed to load projects");
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const projectsQuery = useProjects({ ...pagination });
+  const createProjectMutation = useCreateProject();
+  const deleteProjectMutation = useDeleteProject();
+  const refreshProjectMutation = useRefreshProject();
 
   const onSubmit = async (data: CreateProjectBody) => {
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await projectsService.createProject({
+      await createProjectMutation.mutateAsync({
         repositoryPath: data.repositoryPath,
       });
-      if (result.data) {
-        setProjects([result.data.project, ...projects]);
-        form.reset();
-        setIsDialogOpen(false);
+      form.reset();
+      setIsDialogOpen(false);
+    } catch (err) {
+      if (err instanceof Error && "status" in err && err.status === 404) {
+        form.setError("repositoryPath", {
+          type: "server",
+          message: "Repository not found",
+        });
       } else {
-        if (result.status === 404) {
-          form.setError("repositoryPath", {
-            type: "server",
-            message: "Repository not found",
-          });
-        } else {
-          setError(result.error || "Failed to add project");
-        }
+        setError(err instanceof Error ? err.message : "Failed to add project");
       }
-    } catch {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleDeleteProject = async (projectId: string) => {
     if (!confirm("Are you sure you want to delete this project?")) return;
-
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await projectsService.deleteProject(projectId);
-      if (result.success) {
-        setProjects(projects.filter((p) => p.id !== projectId));
-      } else {
-        setError(result.error || "Failed to delete project");
-      }
+      await deleteProjectMutation.mutateAsync(projectId);
     } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : "Failed to delete project");
     }
   };
 
   const handleRefreshProject = async (projectId: string) => {
-    setIsLoading(true);
     setError(null);
-
     try {
-      const result = await projectsService.refreshProject(projectId);
-      if (result.data) {
-        setProjects(
-          projects.map((p) => (p.id === projectId ? result.data!.project : p))
-        );
-      } else {
-        setError(result.error || "Failed to refresh project");
-      }
+      await refreshProjectMutation.mutateAsync(projectId);
     } catch (err) {
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
+      setError(
+        err instanceof Error ? err.message : "Failed to refresh project"
+      );
     }
   };
 
@@ -196,10 +153,10 @@ export const ProjectsPage: React.FC = () => {
                 <DialogFooter>
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={createProjectMutation.isPending}
                     className="flex items-center gap-2"
                   >
-                    {isLoading ? (
+                    {createProjectMutation.isPending ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
                     ) : (
                       <Plus className="w-4 h-4" />
@@ -222,7 +179,7 @@ export const ProjectsPage: React.FC = () => {
 
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
+        {projectsQuery.data?.projects.map((project) => (
           <Card key={project.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
@@ -247,7 +204,7 @@ export const ProjectsPage: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRefreshProject(project.id)}
-                    disabled={isLoading}
+                    disabled={refreshProjectMutation.isPending}
                     className="h-8 w-8 p-0"
                   >
                     <RefreshCw className="w-4 h-4" />
@@ -256,7 +213,7 @@ export const ProjectsPage: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteProject(project.id)}
-                    disabled={isLoading}
+                    disabled={deleteProjectMutation.isPending}
                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -314,8 +271,23 @@ export const ProjectsPage: React.FC = () => {
         ))}
       </div>
 
+      {projectsQuery.data && (
+        <ProjectsPagination
+          currentPage={page}
+          totalPages={Math.max(
+            1,
+            Math.ceil(projectsQuery.data.total / pagination.limit)
+          )}
+          disablePrevious={page <= 1 || projectsQuery.isFetching}
+          disableNext={
+            page >= Math.ceil(projectsQuery.data.total / pagination.limit) ||
+            projectsQuery.isFetching
+          }
+        />
+      )}
+
       {/* Empty State */}
-      {projects.length === 0 && (
+      {projectsQuery.isSuccess && projectsQuery.data.projects.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
             <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -332,6 +304,11 @@ export const ProjectsPage: React.FC = () => {
               Add Your First Project
             </Button>
           </CardContent>
+        </Card>
+      )}
+      {projectsQuery.isPending && (
+        <Card className="text-center py-12">
+          <CardContent>Loading projects...</CardContent>
         </Card>
       )}
     </div>

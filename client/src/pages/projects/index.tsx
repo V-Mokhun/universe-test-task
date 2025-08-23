@@ -86,6 +86,16 @@ export const ProjectsPage = () => {
           type: "server",
           message: "Repository not found",
         });
+      } else if (
+        err instanceof Error &&
+        "status" in err &&
+        err.status === 401
+      ) {
+        form.setError("repositoryPath", {
+          type: "server",
+          message:
+            "Authentication failed. Please try again or contact support if the issue persists.",
+        });
       } else {
         setError(err instanceof Error ? err.message : "Failed to add project");
       }
@@ -107,9 +117,15 @@ export const ProjectsPage = () => {
     try {
       await refreshProjectMutation.mutateAsync(projectId);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to refresh project"
-      );
+      if (err instanceof Error && "status" in err && err.status === 401) {
+        setError(
+          "Authentication failed. Please try again or contact support if the issue persists."
+        );
+      } else {
+        setError(
+          err instanceof Error ? err.message : "Failed to refresh project"
+        );
+      }
     }
   };
 

@@ -5,6 +5,7 @@ export interface IHttpClient {
   delete<T>(endpoint: string): Promise<ApiResponse<T>>;
   request<T>(endpoint: string, config?: RequestInit): Promise<ApiResponse<T>>;
   constructQueryString(params: Record<string, string>): Promise<string>;
+  resetRefreshState(): void;
 }
 
 export interface ApiResponse<T = unknown> {
@@ -15,6 +16,9 @@ export interface ApiResponse<T = unknown> {
 
 export class HttpClient implements IHttpClient {
   private baseURL: string;
+  private refreshAttempts: number = 0;
+  private readonly MAX_REFRESH_ATTEMPTS = 1;
+  private isRefreshing: boolean = false;
 
   constructor(baseURL?: string) {
     this.baseURL =
@@ -24,7 +28,8 @@ export class HttpClient implements IHttpClient {
   private async handleResponse<T>(
     response: Response,
     endpoint: string,
-    originalConfig?: RequestInit
+    originalConfig: RequestInit = {},
+    retryRefresh = true
   ): Promise<ApiResponse<T>> {
     const contentType = response.headers.get("content-type");
     const isJson = contentType && contentType.includes("application/json");
@@ -34,21 +39,49 @@ export class HttpClient implements IHttpClient {
       return { data, status: response.status };
     }
 
-    if (response.status === 401) {
-      const refreshResult = await this.tryRefreshToken();
-      if (refreshResult) {
-        return this.request<T>(endpoint, originalConfig);
-      } else {
-        return { error: "Unauthorized", status: response.status };
+    const errorResponse = isJson
+      ? await response.json()
+      : await response.text();
+    const errorMessage =
+      typeof errorResponse === "string"
+        ? errorResponse
+        : errorResponse.message || "";
+
+    if (response.status === 401 && retryRefresh) {
+      if (
+        this.refreshAttempts < this.MAX_REFRESH_ATTEMPTS &&
+        !this.isRefreshing
+      ) {
+        this.refreshAttempts++;
+        this.isRefreshing = true;
+
+        try {
+          const refreshResult = await this.tryRefreshToken();
+          if (refreshResult) {
+            this.isRefreshing = false;
+            const retryResponse = await this.request<T>(
+              endpoint,
+              originalConfig,
+              false
+            );
+
+            this.refreshAttempts = 0;
+            return retryResponse;
+          }
+        } finally {
+          this.isRefreshing = false;
+        }
       }
+
+      this.refreshAttempts = 0;
+      return {
+        error: errorMessage || "Unauthorized",
+        status: response.status,
+      };
     }
 
-    const error = isJson ? await response.json() : await response.text();
     return {
-      error:
-        typeof error === "string"
-          ? error
-          : error.message || "An error occurred",
+      error: errorMessage,
       status: response.status,
     };
   }
@@ -79,7 +112,8 @@ export class HttpClient implements IHttpClient {
 
   async request<T>(
     endpoint: string,
-    config: RequestInit = {}
+    config: RequestInit = {},
+    retryRefresh = true
   ): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -91,7 +125,12 @@ export class HttpClient implements IHttpClient {
         },
       });
 
-      return await this.handleResponse<T>(response, endpoint, config);
+      return await this.handleResponse<T>(
+        response,
+        endpoint,
+        config,
+        retryRefresh
+      );
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : "Network error",
@@ -120,5 +159,10 @@ export class HttpClient implements IHttpClient {
 
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: "DELETE" });
+  }
+
+  resetRefreshState(): void {
+    this.refreshAttempts = 0;
+    this.isRefreshing = false;
   }
 }

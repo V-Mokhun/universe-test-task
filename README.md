@@ -22,6 +22,8 @@ A full-stack application for tracking and managing GitHub repositories with real
 
    ```bash
    cd server
+   cp .env.example .env
+   # fill in the .env file with the correct values
    docker-compose up -d
    ```
 
@@ -29,6 +31,8 @@ A full-stack application for tracking and managing GitHub repositories with real
 
    ```bash
    cd client
+   cp .env.example .env
+   # fill in the .env file with the correct values (you can leave as is if you haven't changed the api port for server)
    npm install
    npm run dev
    ```

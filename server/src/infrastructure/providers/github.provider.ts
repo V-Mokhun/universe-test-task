@@ -4,7 +4,11 @@ import {
   IRepositoryData,
   repositorySchema,
 } from "@/shared/ports";
-import { BadRequestException, NotFoundException } from "@/shared/exceptions";
+import {
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+} from "@/shared/exceptions";
 
 export class GitHubProvider implements IProjectsProvider {
   constructor(
@@ -30,6 +34,19 @@ export class GitHubProvider implements IProjectsProvider {
         if (response.status === 404) {
           throw new NotFoundException("Repository not found");
         }
+        if (response.status === 401) {
+          this.logger.error({
+            message: "GitHub API authentication failed - invalid access token",
+            meta: {
+              owner,
+              repo,
+              response: response.data,
+            },
+          });
+          throw new UnauthorizedException(
+            "GitHub API authentication failed - invalid access token"
+          );
+        }
         this.logger.error({
           message: `GitHub API error: ${response.status}`,
           meta: {
@@ -48,7 +65,9 @@ export class GitHubProvider implements IProjectsProvider {
         stars: response.data.stargazers_count,
         forks: response.data.forks_count,
         openIssues: response.data.open_issues_count,
-        repoCreatedAt: Math.floor(new Date(response.data.created_at).getTime() / 1000),
+        repoCreatedAt: Math.floor(
+          new Date(response.data.created_at).getTime() / 1000
+        ),
       });
 
       if (!data.success) {

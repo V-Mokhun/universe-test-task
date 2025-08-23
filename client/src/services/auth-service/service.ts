@@ -48,6 +48,8 @@ export class AuthService extends BaseService {
       await this.post("/auth/logout");
     } catch {
       console.warn("Logout request failed");
+    } finally {
+      this.httpClient.resetRefreshState();
     }
   }
 

@@ -20,7 +20,7 @@ type PaginationProps = {
   onPageChange?: (page: number) => void;
 };
 
-export const ProjectsPagination: React.FC<PaginationProps> = ({
+export const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
   disableNext,
@@ -171,5 +171,3 @@ export const ProjectsPagination: React.FC<PaginationProps> = ({
     </PaginationRoot>
   );
 };
-
-
